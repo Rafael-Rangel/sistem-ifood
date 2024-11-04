@@ -1,0 +1,51 @@
+.login-container {
+    height: 100vh;
+}
+.login-container .container-fluid{
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 0;
+}
+.form-signin {
+    width: 100%;
+}
+
+.btn.btn-login {
+    width: 100%;
+    background-color:var(--bs-primary-text-emphasis);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+#ifood-logo {
+    width: 100%;
+    max-width: 260px;
+    height: auto;
+    margin-bottom: 4rem;
+}
+
+#ifood-login-image{
+    width: 45vw;
+    position: relative;
+    transform: translateX(10%);
+}
+
+
+.send-text-container {
+    width: 100%;
+    max-width: 420px;
+}
+
+.login-link{
+    color: var(--bs-white);
+}
+
+.login-link:hover{
+    color: var(--bs-primary-text-emphasis);
+}
+
+.btn.btn-login:hover {
+    background-color: #ffffff; /* cor de fundo invertida */
+    color: #800020 !important; /* cor do texto invertida */
+    border: 2px solid #800020; /* borda vinho */
+}
