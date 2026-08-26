@@ -1,36 +1,22 @@
 class IconSet extends HTMLElement {
-    constructor() {
-        super();
-        this.imageUrl = this.getAttribute('imageUrl');
-        this.imageClass = this.classList;
-    }
-
-    connectedCallback() {
-        this.fetchAndReplaceIcon();
-        
-    }
-
-    fetchAndReplaceIcon() {
-        if (this.imageUrl) {
-            fetch(this.imageUrl)
-                .then(response => response.text())
-                .then(svgContent => {
-                    const tempContainer = document.createElement('svg');
-                    
-                    tempContainer.innerHTML = svgContent;
-
-                    const svgElement = tempContainer.querySelector('svg');
-
-                    if(this.classList.length>0){
-                         svgElement.classList.add(this.imageClass);
-                    }
-                    
-                    this.parentNode.replaceChild(svgElement, this);
-                })
-                .catch(error => console.error('Error fetching SVG:', error));
-        }
-    }
+  connectedCallback() {
+    const imageUrl = this.getAttribute("imageUrl");
+    if (!imageUrl) return;
+    fetch(imageUrl)
+      .then((response) => response.text())
+      .then((svgContent) => {
+        const temp = document.createElement("div");
+        temp.innerHTML = svgContent;
+        const svg = temp.querySelector("svg");
+        if (!svg) return;
+        svg.setAttribute("aria-hidden", "true");
+        this.classList.forEach((cls) => svg.classList.add(cls));
+        if (this.parentNode) this.parentNode.replaceChild(svg, this);
+      })
+      .catch(() => {});
+  }
 }
 
-// Define the new element
-customElements.define('icon-set', IconSet);
+if (!customElements.get("icon-set")) {
+  customElements.define("icon-set", IconSet);
+}

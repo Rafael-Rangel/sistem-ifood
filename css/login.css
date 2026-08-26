@@ -25,9 +25,11 @@
 }
 
 #ifood-login-image{
-    width: 45vw;
+    width: min(45vw, 560px);
+    max-width: 100%;
+    height: auto;
     position: relative;
-    transform: translateX(10%);
+    transform: translateX(6%);
 }
 
 
