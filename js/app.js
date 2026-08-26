@@ -952,71 +952,120 @@
       </div>
     </form>`;
 
+  const escapeHtml = (value) =>
+    String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  const chatAvatar = (thread) => {
+    const initials = String(thread.name || "?")
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase();
+    return `<div class="chat-avatar ${thread.online ? "is-online" : ""}" style="background:${thread.color || "#EA0033"}">${initials}</div>`;
+  };
+
   const renderMensagens = () => {
     const threads = S.threads();
     const current = threads.find((t) => t.id === activeThread) || threads[0];
     activeThread = current?.id;
+    const unreadTotal = threads.reduce((sum, t) => sum + (t.unread || 0), 0);
+    let lastDay = "";
+    const bubbles = (current.messages || [])
+      .map((m) => {
+        const divider =
+          m.day && m.day !== lastDay
+            ? `<div class="chat-day"><span>${(lastDay = m.day)}</span></div>`
+            : "";
+        const mine = m.from === "me";
+        return `${divider}
+          <div class="chat-row ${mine ? "mine" : "theirs"}">
+            <div class="chat-bubble">
+              <p>${escapeHtml(m.text)}</p>
+              <time>${escapeHtml(m.at)}${mine ? ' <span class="chat-ticks">✓✓</span>' : ""}</time>
+            </div>
+          </div>`;
+      })
+      .join("");
     view.innerHTML = `
-      <div class="container-fluid h-100 px-0">
-        <div class="message-structure h-100">
-          <aside class="message-list">
-            <div id="collapseAside" class="nav nav-message border-end flex-column ${window.innerWidth < 768 ? "" : "show"}">
-              ${threads
-                .map(
-                  (t) => `
-                <a class="nav-link ${t.id === activeThread ? "active" : ""}" href="#" data-thread="${t.id}">
-                  <div class="rounded-pills p-i me-3">
-                    <img src="./public/images/image-placeholder.png" width="40" class="object-fit-cover border rounded-pill" alt="">
-                  </div>
-                  <div class="flex-fill pe-2 overflow-hidden">
-                    <h6 class="name pe-2">${t.name}</h6>
-                    <small class="text-body-tertiary">${t.preview}</small>
-                  </div>
-                  ${t.unread ? `<div class="badge bg-primary">${t.unread}</div>` : ""}
-                </a>`
-                )
-                .join("")}
+      <div class="chat-app">
+        <button class="chat-overlay" id="chat-overlay" data-toggle-chat type="button" aria-label="Fechar lista"></button>
+        <aside class="chat-list" id="collapseAside">
+          <div class="chat-list-head">
+            <div class="d-flex align-items-center justify-content-between">
+              <h6 class="m-0">Conversas</h6>
+              ${unreadTotal ? `<span class="chat-unread-total">${unreadTotal} novas</span>` : ""}
             </div>
-          </aside>
-          <div class="tab-content tab-content-message">
-            <div class="tab-pane fade show active" style="display:grid;grid-template-rows:auto 1fr auto;height:100%">
-              <header class="message-header border-bottom">
-                <div class="d-flex align-items-center px-3 py-3">
-                  <button class="btn btn-collapse btn-primary d-md-none me-3 px-2" data-toggle-chat>
-                    <icon-set imageUrl="./public/icons/icon-brand-messenger.svg"></icon-set>
-                  </button>
-                  <div class="rounded-pills p-i me-3">
-                    <img src="./public/images/image-placeholder.png" width="40" class="object-fit-cover border rounded-pill" alt="">
-                  </div>
-                  <div class="flex-fill"><h6 class="mb-0">${current.name}<br><small class="text-body-tertiary">online</small></h6></div>
-                </div>
-              </header>
-              <div class="message-body" id="chat-body">
-                ${current.messages
-                  .map(
-                    (m) => `
-                  <div class="message ${m.from === "me" ? "right" : "left"} p-2">
-                    <div class="card card-message ${m.from === "me" ? "right" : ""} shadow">
-                      <div class="card-header text-primary">${m.from === "me" ? session.name : current.name}</div>
-                      <div class="card-body">${m.text}</div>
-                      <div class="card-footer"><small class="text-body-tertiary">${m.at}</small></div>
-                    </div>
-                  </div>`
-                  )
-                  .join("")}
-              </div>
-              <footer class="message-footer shadow-lg border-top p-2">
-                <textarea class="form-control rounded-4" id="chat-input" rows="1" placeholder="Escreva sua mensagem aqui..."></textarea>
-                <button class="btn btn-primary mx-2 px-2 rounded-pill" id="chat-send">
-                  <icon-set imageUrl="./public/icons/icon-send.svg"></icon-set>
-                </button>
-              </footer>
-            </div>
+            <input class="form-control form-control-sm mt-2" id="chat-search" placeholder="Buscar entregador, cliente...">
           </div>
-        </div>
+          <div class="chat-list-body">
+            ${threads
+              .map(
+                (t) => `
+              <button class="chat-item ${t.id === activeThread ? "active" : ""}" data-thread="${t.id}" type="button">
+                ${chatAvatar(t)}
+                <div class="chat-item-text">
+                  <div class="d-flex justify-content-between gap-2">
+                    <strong>${escapeHtml(t.name)}</strong>
+                    <small class="${t.unread ? "fw-semibold text-primary" : "text-body-tertiary"}">${escapeHtml(t.time || "")}</small>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center gap-2">
+                    <span class="preview">${escapeHtml(t.preview)}</span>
+                    ${t.unread ? `<span class="chat-unread">${t.unread}</span>` : ""}
+                  </div>
+                  <small class="role">${escapeHtml(t.role || "")}</small>
+                </div>
+              </button>`
+              )
+              .join("")}
+          </div>
+        </aside>
+        <section class="chat-main">
+          <header class="chat-main-head">
+            <button class="btn btn-light d-md-none px-2" data-toggle-chat type="button" aria-label="Abrir conversas">☰</button>
+            ${chatAvatar(current)}
+            <div class="flex-fill min-w-0">
+              <strong>${escapeHtml(current.name)}</strong>
+              <div class="chat-status ${current.online ? "online" : ""}">${escapeHtml(current.role || "")} · ${current.online ? "online agora" : "visto por último hoje"}</div>
+            </div>
+          </header>
+          <div class="chat-main-body" id="chat-body">${bubbles}</div>
+          <footer class="chat-main-foot">
+            <div class="chat-quick">
+              <button type="button" data-quick="Pedido saiu para entrega.">Saiu p/ entrega</button>
+              <button type="button" data-quick="Pode buscar na loja, está no balcão.">Buscar na loja</button>
+              <button type="button" data-quick="PIX confirmado no iFood Pago.">PIX confirmado</button>
+              <button type="button" data-quick="Combinado, já avisamos a cozinha.">Aviso à cozinha</button>
+            </div>
+            <div class="chat-compose">
+              <textarea class="form-control" id="chat-input" rows="1" placeholder="Escreva uma mensagem..."></textarea>
+              <button class="btn btn-primary chat-send" id="chat-send" type="button" aria-label="Enviar">
+                <icon-set imageUrl="./public/icons/icon-send.svg"></icon-set>
+              </button>
+            </div>
+          </footer>
+        </section>
       </div>`;
     const body = document.getElementById("chat-body");
     body.scrollTop = body.scrollHeight;
+    const search = document.getElementById("chat-search");
+    search.addEventListener("input", () => {
+      const q = search.value.toLowerCase();
+      document.querySelectorAll(".chat-item").forEach((el) => {
+        el.hidden = !el.textContent.toLowerCase().includes(q);
+      });
+    });
+    document.getElementById("chat-input").addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
   };
 
   const sendMessage = () => {
@@ -1026,13 +1075,13 @@
     if (!text) return;
     const threads = S.threads();
     const thread = threads.find((t) => t.id === activeThread);
-    thread.messages.push({ id: S.uid("m"), from: "me", text, at: "Agora" });
+    thread.messages.push({ id: S.uid("m"), from: "me", text, at: "Agora", day: "Hoje" });
     thread.preview = text;
     thread.unread = 0;
+    thread.time = "Agora";
     S.saveThreads(threads);
     input.value = "";
     renderMensagens();
-    animateView();
     updateBadges();
   };
 
@@ -1043,6 +1092,7 @@
     closeSidebar();
     closeModal();
     setActiveNav(known);
+    view.classList.toggle("is-chat", known === "mensagens");
     if (known === "inicio") renderHome();
     else if (known === "gestao") renderGestao();
     else if (known === "repasses") renderRepasses();
@@ -1165,6 +1215,15 @@
     }
     if (event.target.closest("[data-toggle-chat]")) {
       document.getElementById("collapseAside")?.classList.toggle("show");
+      document.getElementById("chat-overlay")?.classList.toggle("show");
+      return;
+    }
+    const quick = event.target.closest("[data-quick]");
+    if (quick) {
+      const input = document.getElementById("chat-input");
+      if (input) input.value = quick.dataset.quick;
+      sendMessage();
+      return;
     }
     if (event.target.closest("#chat-send")) sendMessage();
     if (event.target.closest("[data-logout]")) {
