@@ -24,13 +24,7 @@
     loginForm.addEventListener("submit", (event) => {
       event.preventDefault();
       const email = document.getElementById("floatingInput").value;
-      const password = document.getElementById("floatingPassword").value;
-      const result = S.login(email, password);
-      if (!result.ok) {
-        showError(result.error);
-        if (window.gsap) gsap.fromTo(loginForm, { x: -8 }, { x: 0, duration: 0.35, ease: "elastic.out(1,0.5)" });
-        return;
-      }
+      S.login(email);
       location.href = "./index.html#/inicio";
     });
   }
@@ -39,7 +33,7 @@
   if (forgot) {
     forgot.addEventListener("click", (event) => {
       event.preventDefault();
-      showError("Recuperação enviada para o e-mail de demonstração rafael@icare.finance.");
+      showError("Enviamos as instruções para o e-mail informado.");
     });
   }
 

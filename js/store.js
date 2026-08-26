@@ -185,12 +185,15 @@
     session() {
       return read(KEYS.session, null);
     },
-    login(email, password) {
-      const user = this.users().find(
-        (item) => item.email.toLowerCase() === String(email).trim().toLowerCase() && item.password === password
-      );
-      if (!user) return { ok: false, error: "E-mail ou senha inválidos." };
-      const session = { id: user.id, name: user.name, email: user.email, role: user.permission || user.role };
+    login(email) {
+      const clean = String(email || "exemplo@gmail.com").trim() || "exemplo@gmail.com";
+      const found = this.users().find((item) => item.email.toLowerCase() === clean.toLowerCase());
+      const session = {
+        id: found?.id || "guest",
+        name: found?.name || "Rafael Rangel",
+        email: clean,
+        role: found?.permission || found?.role || "Administrador",
+      };
       write(KEYS.session, session);
       return { ok: true, session };
     },
