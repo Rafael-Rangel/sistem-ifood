@@ -20,7 +20,7 @@
 
   let charts = [];
   let activeThread = "t1";
-  let sortState = { key: "time", dir: 1 };
+  let reportDays = 7;
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -192,30 +192,40 @@
     };
   };
 
-  const rank = (items, key) => {
-    const map = {};
-    items.forEach((item) => {
-      const name = item[key];
-      map[name] = (map[name] || 0) + 1;
-    });
-    return Object.entries(map)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+  const inRange = (orders, days) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - (days - 1));
+    const from = start.toISOString().slice(0, 10);
+    const to = end.toISOString().slice(0, 10);
+    return orders.filter((o) => o.date >= from && o.date <= to);
   };
 
-  const productRank = (orders) => {
+  const hourBucket = (time) => {
+    const hour = Number(String(time).slice(0, 2));
+    if (hour < 15) return "Almoço (11h–14h)";
+    if (hour < 18) return "Tarde (15h–17h)";
+    return "Jantar (18h–23h)";
+  };
+
+  const riderStats = (orders) => {
     const map = {};
-    orders.forEach((order) => {
-      order.items.split(",").forEach((raw) => {
-        const name = raw.trim();
-        map[name] = (map[name] || 0) + 1;
-      });
+    orders.forEach((o) => {
+      const name = o.delivery || "Sem entregador";
+      if (!map[name]) map[name] = { name, total: 0, value: 0, done: 0, cancel: 0 };
+      map[name].total += 1;
+      map[name].value += o.status === "Cancelado" ? 0 : o.value;
+      if (o.status === "Concluído") map[name].done += 1;
+      if (o.status === "Cancelado") map[name].cancel += 1;
     });
-    return Object.entries(map)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    return Object.values(map)
+      .map((row) => ({
+        ...row,
+        ticket: row.done ? row.value / row.done : 0,
+        cancelRate: row.total ? (row.cancel / row.total) * 100 : 0,
+        rating: Math.min(5, (4.4 + row.done * 0.04 - row.cancel * 0.15)).toFixed(1),
+      }))
+      .sort((a, b) => b.done - a.done);
   };
 
   const tableRows = (orders, extra = "") =>
@@ -733,60 +743,151 @@
       </div>
     </form>`;
 
-  const podium = (list, unit) => {
-    const [first, second, third, ...rest] = list.concat(Array(10).fill({ name: "—", count: 0 })).slice(0, 10);
-    const col = (item, place, color, h) => `
-      <div class="podium-col">
-        <img src="./public/images/${place === 1 ? "coroa-ouro" : place === 2 ? "coroa-prata" : "coroa-vermelha"}.svg" alt="">
-        <div style="width:84px;height:84px;border-radius:48px;background:#F9F2E8;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <h3 class="numeroPedidosRanking" style="color:${color}">${item.count}</h3>
-          <p class="textoPedidos m-0" style="color:${color}">${unit}</p>
-        </div>
-        <p class="posicaoText"><span>${place}°</span> ${item.name}</p>
-        <div class="podium-bar" style="height:${h}px;background:${color === "#664D03" ? "#FFC107" : color === "#6C757D" ? "#DEE2E6" : "#FFE5EB"}"></div>
-      </div>`;
-    return `
-      <div class="ranking-podium">${col(second, 2, "#6C757D", 72)}${col(first, 1, "#664D03", 118)}${col(third, 3, "#DC3545", 46)}</div>
-      <div class="outrasPosicoes mt-3">
-        ${[first, second, third, ...rest]
-          .slice(3)
-          .map(
-            (item, i) => `
-          <div class="divCelulaOutrasPosicoes">
-            <div class="divCelulaPosicao">${i + 4}°</div>
-            <div class="divCelulaNome">${item.name}</div>
-            <div class="divCelulaPedidos">${item.count}</div>
-          </div>`
-          )
-          .join("")}
-      </div>`;
-  };
-
   const renderAnalises = () => {
-    const orders = S.orders().filter((o) => o.status === "Concluído");
-    const clients = rank(orders, "customer");
-    const riders = rank(orders, "delivery");
-    const foods = productRank(orders);
+    const period = inRange(S.orders(), reportDays);
+    const done = period.filter((o) => o.status === "Concluído");
+    const cancel = period.filter((o) => o.status === "Cancelado");
+    const gross = done.reduce((s, o) => s + o.value, 0);
+    const ticket = done.length ? gross / done.length : 0;
+    const cancelRate = period.length ? (cancel.length / period.length) * 100 : 0;
+    const fee = done.filter((o) => o.payment !== "Dinheiro").reduce((s, o) => s + o.value, 0) * 0.12;
+    const riders = riderStats(period);
+    const foods = {};
+    done.forEach((o) => o.items.split(",").forEach((raw) => {
+      const name = raw.trim();
+      foods[name] = (foods[name] || 0) + 1;
+    }));
+    const topFoods = Object.entries(foods).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const shifts = { "Almoço (11h–14h)": 0, "Tarde (15h–17h)": 0, "Jantar (18h–23h)": 0 };
+    done.forEach((o) => {
+      shifts[hourBucket(o.time)] += o.value;
+    });
+    const days = [...Array(reportDays)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (reportDays - 1 - i));
+      return d.toISOString().slice(0, 10);
+    });
+    const dayValues = days.map((d) => done.filter((o) => o.date === d).reduce((s, o) => s + o.value, 0));
+    const peakShift = Object.entries(shifts).sort((a, b) => b[1] - a[1])[0];
+    const topRider = riders[0];
+    const topItem = topFoods[0];
+    const pixShare = done.length ? (done.filter((o) => o.payment === "Pix").length / done.length) * 100 : 0;
+
+    const insights = [
+      peakShift && peakShift[1] > 0 ? `O pico de faturamento está no ${peakShift[0].toLowerCase()} (${S.money(peakShift[1])}). Reforce a escala de entregadores nesse horário.` : null,
+      topRider ? `${topRider.name} lidera com ${topRider.done} entregas concluídas e nota ${topRider.rating}. Vale priorizar nas rotas longas.` : null,
+      topItem ? `${topItem[0]} é o item mais pedido (${topItem[1]} vendas). Mantenha estoque e combo no iFood.` : null,
+      pixShare >= 40 ? `Pix já representa ${pixShare.toFixed(0)}% das vendas — o dinheiro cai mais rápido no iFood Pago.` : `Ainda há espaço para incentivar Pix e reduzir o prazo de repasse.`,
+      cancelRate >= 8 ? `A taxa de cancelamento está em ${cancelRate.toFixed(1)}%. Revise tempo de preparo e disponibilidade de motoboy.` : `Cancelamentos sob controle (${cancelRate.toFixed(1)}%).`,
+    ].filter(Boolean);
+
     view.innerHTML = `
-      <section class="container-fluid py-4">
-        <h5 class="page-animate">Ranking dos 10 melhores</h5>
-        <div class="divPrincipalCards">
+      <div class="container-fluid pb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 page-animate">
+          <p class="text-body-tertiary m-0">Relatório operacional da loja: dinheiro, pedidos e desempenho dos entregadores iFood.</p>
+          <div class="d-flex flex-wrap gap-2">
+            ${[7, 15, 30].map((d) => `<button class="btn btn-sm ${reportDays === d ? "btn-primary" : "btn-outline-primary"}" data-report-days="${d}">${d} dias</button>`).join("")}
+            <button class="btn btn-sm btn-dark" data-export-report>Exportar CSV</button>
+          </div>
+        </div>
+        <div class="row mt-2">
           ${[
-            ["Clientes mais frequentes", clients, "Pedidos"],
-            ["Melhores entregadores", riders, "Entregas"],
-            ["Queridinhos dos clientes", foods, "Pedidos"],
+            ["Faturamento bruto", gross, `${done.length} pedidos concluídos`],
+            ["Ticket médio", ticket, "por pedido pago"],
+            ["Taxa iFood (12%)", fee, `líquido ${S.money(gross - fee)}`],
+            ["Cancelamentos", cancelRate, `${cancel.length} pedidos · meta &lt; 8%`],
           ]
             .map(
-              ([title, list, unit]) => `
-            <div class="containerCardsRanking page-animate anim-card">
-              <div class="firstDivCardsRanking"><h6 class="text-secondary m-0">${title}</h6></div>
-              ${podium(list, unit)}
+              ([label, value, sub], i) => `
+            <div class="col-12 col-sm-6 col-xl-3 my-2 page-animate">
+              <div class="card kpi-card h-100">
+                <div class="card-header"><h6 class="m-0 text-secondary">${label}</h6></div>
+                <div class="card-body">
+                  <h4 ${i === 3 ? "" : `data-count="${value}"`}>${i === 3 ? `${Number(value).toFixed(1)}%` : S.money(value)}</h4>
+                  <small class="text-body-tertiary">${sub}</small>
+                </div>
+              </div>
             </div>`
             )
             .join("")}
         </div>
-      </section>`;
-    if (window.gsap && !reduceMotion) gsap.from(".podium-bar", { scaleY: 0, duration: 0.7, stagger: 0.05, ease: "back.out(1.4)" });
+        <div class="row">
+          <div class="col-12 col-xl-7 my-2 page-animate">
+            <div class="card anim-card h-100">
+              <div class="card-header"><h6 class="m-0 text-secondary">Faturamento diário</h6></div>
+              <div class="card-body"><div class="chart-wrap"><canvas id="reportDayChart"></canvas></div></div>
+            </div>
+          </div>
+          <div class="col-12 col-xl-5 my-2 page-animate">
+            <div class="card anim-card h-100">
+              <div class="card-header"><h6 class="m-0 text-secondary">Receita por turno</h6></div>
+              <div class="card-body"><div class="chart-wrap"><canvas id="reportShiftChart"></canvas></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 col-lg-7 my-2 page-animate">
+            <div class="card anim-card">
+              <div class="card-header"><h6 class="m-0">Desempenho dos entregadores</h6></div>
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead><tr><th>Entregador</th><th>Entregas</th><th>Faturamento</th><th>Ticket</th><th>Cancel.</th><th>Nota</th></tr></thead>
+                  <tbody>
+                    ${riders.length ? riders.map((r) => `
+                      <tr>
+                        <td class="text-primary">${r.name}</td>
+                        <td>${r.done}/${r.total}</td>
+                        <td>${S.money(r.value)}</td>
+                        <td>${S.money(r.ticket)}</td>
+                        <td>${r.cancelRate.toFixed(0)}%</td>
+                        <td>${r.rating}</td>
+                      </tr>`).join("") : `<tr><td colspan="6" class="text-body-tertiary">Sem entregas no período.</td></tr>`}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-5 my-2 page-animate">
+            <div class="card anim-card h-100">
+              <div class="card-header"><h6 class="m-0">Itens que mais saem</h6></div>
+              <div class="card-body">
+                ${topFoods.map(([name, count], i) => `
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div><strong>${i + 1}º ${name}</strong><div class="progress mt-1" style="width:180px;max-width:100%;height:6px"><div class="progress-bar bg-primary" style="width:${Math.max(12, (count / (topFoods[0]?.[1] || 1)) * 100)}%"></div></div></div>
+                    <span class="text-body-tertiary">${count}</span>
+                  </div>`).join("") || '<p class="text-body-tertiary mb-0">Sem vendas no período.</p>'}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 my-2 page-animate">
+            <div class="card anim-card">
+              <div class="card-header"><h6 class="m-0">Insights para o parceiro</h6></div>
+              <div class="card-body row g-3">
+                ${insights.map((text) => `<div class="col-12 col-md-6 col-xl-4"><div class="insight-card">${text}</div></div>`).join("")}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    makeChart("reportDayChart", {
+      type: "line",
+      data: {
+        labels: days.map((d) => new Date(`${d}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })),
+        datasets: [{ data: dayValues, borderColor: "#EA0033", backgroundColor: "rgba(234,0,51,.12)", fill: true, tension: 0.35 }],
+      },
+      options: { plugins: { legend: { display: false } }, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } },
+    });
+    makeChart("reportShiftChart", {
+      type: "doughnut",
+      data: {
+        labels: Object.keys(shifts),
+        datasets: [{ data: Object.values(shifts), backgroundColor: ["#EA0033", "#FFC107", "#6C757D"] }],
+      },
+      options: { plugins: { legend: { position: "bottom" } }, maintainAspectRatio: false },
+    });
   };
 
   const renderSeguranca = () => {
@@ -1004,6 +1105,26 @@
     }
     if (event.target.closest("[data-product-new]")) {
       openModal(productForm());
+      return;
+    }
+    const daysBtn = event.target.closest("[data-report-days]");
+    if (daysBtn) {
+      reportDays = Number(daysBtn.dataset.reportDays);
+      render();
+      return;
+    }
+    if (event.target.closest("[data-export-report]")) {
+      const period = inRange(S.orders(), reportDays);
+      const lines = ["data,hora,cliente,itens,pagamento,valor,status,entregador"];
+      period.forEach((o) => {
+        lines.push([o.date, o.time, o.customer, `"${o.items}"`, o.payment, o.value, o.status, o.delivery].join(","));
+      });
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `relatorio-icare-${reportDays}dias.csv`;
+      link.click();
+      toast("Relatório CSV baixado.");
       return;
     }
     const toggleItem = event.target.closest("[data-toggle-item]");
