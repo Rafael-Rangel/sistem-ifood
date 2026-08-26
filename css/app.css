@@ -60,6 +60,22 @@ body {
   justify-content: center;
 }
 
+.pay-card {
+  border: 1px solid var(--bs-border-color);
+  box-shadow: 0 8px 24px rgba(234, 0, 51, 0.04);
+}
+
+.pay-card .progress {
+  height: 6px;
+  background: #f1f3f5;
+}
+
+.pay-card .colored-icon svg,
+.pay-card svg {
+  width: 28px;
+  height: 28px;
+}
+
 .kpi-card,
 .anim-card {
   border: 1px solid var(--bs-border-color);

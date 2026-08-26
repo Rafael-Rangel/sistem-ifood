@@ -5,6 +5,9 @@
     orders: "icare.orders",
     threads: "icare.threads",
     notices: "icare.notices",
+    menu: "icare.menu",
+    payouts: "icare.payouts",
+    version: "icare.dataVersion",
   };
 
   const DEMO = {
@@ -88,6 +91,34 @@
     { id: "p18", customer: "Beatriz Oliveira", items: "Hambúrguer Vegano, Suco", payment: "Pix", value: 34.0, date: "2026-08-26", time: "15:00", status: "Cancelado", delivery: "Victor João" },
     { id: "p19", customer: "Felipe Martins", items: "Cheeseburguer, Fritas", payment: "Crédito", value: 41.2, date: "2026-08-19", time: "20:15", status: "Concluído", delivery: "Diego Alves" },
     { id: "p20", customer: "Mariana Souza", items: "Super Bacon Burger, Milkshake", payment: "Pix", value: 55.4, date: "2026-08-18", time: "21:00", status: "Concluído", delivery: "João da Silva" },
+    { id: "p21", customer: "Helena Dias", items: "Combo Família, 2 Coca-Cola", payment: "Pix", value: 89.9, date: "2026-08-26", time: "18:20", status: "Concluído", delivery: "João da Silva" },
+    { id: "p22", customer: "Ricardo Alves", items: "Hambúrguer Duplo, Fritas, Milkshake", payment: "Crédito", value: 67.5, date: "2026-08-26", time: "18:45", status: "Pendente", delivery: "Carolina Pereira" },
+    { id: "p23", customer: "Sofia Lima", items: "Açaí 700ml, Granola, Banana", payment: "Pix", value: 32.0, date: "2026-08-26", time: "19:05", status: "Concluído", delivery: "Diego Alves" },
+    { id: "p24", customer: "Bruno Castro", items: "Super Bacon Burger, Onion Rings, Coca-Cola", payment: "Débito", value: 58.9, date: "2026-08-26", time: "19:30", status: "Em preparo", delivery: "João da Silva" },
+    { id: "p25", customer: "Larissa Nunes", items: "Hambúrguer Vegano, Suco Natural", payment: "Dinheiro", value: 36.0, date: "2026-08-25", time: "12:40", status: "Concluído", delivery: "Victor João" },
+    { id: "p26", customer: "Thiago Melo", items: "Cheeseburguer, Fritas, Refrigerante", payment: "Pix", value: 44.5, date: "2026-08-24", time: "20:10", status: "Concluído", delivery: "Camila Rocha" },
+    { id: "p27", customer: "Paula Ribeiro", items: "Combo Família", payment: "Crédito", value: 92.0, date: "2026-08-23", time: "21:00", status: "Concluído", delivery: "João da Silva" },
+    { id: "p28", customer: "Caio Pinto", items: "Hambúrguer de Frango, Chá Gelado", payment: "Pix", value: 41.9, date: "2026-08-22", time: "11:25", status: "Concluído", delivery: "Carolina Pereira" },
+  ];
+
+  const seedMenu = () => [
+    { id: "m1", name: "Super Bacon Burger", category: "Lanches", price: 42.9, available: true, sold: 234 },
+    { id: "m2", name: "Hambúrguer Duplo", category: "Lanches", price: 38.5, available: true, sold: 132 },
+    { id: "m3", name: "Hambúrguer Vegano", category: "Lanches", price: 34.0, available: true, sold: 87 },
+    { id: "m4", name: "Cheeseburguer", category: "Lanches", price: 29.9, available: true, sold: 156 },
+    { id: "m5", name: "Combo Família", category: "Combos", price: 89.9, available: true, sold: 64 },
+    { id: "m6", name: "Fritas", category: "Acompanhamentos", price: 14.9, available: true, sold: 198 },
+    { id: "m7", name: "Onion Rings", category: "Acompanhamentos", price: 16.9, available: true, sold: 91 },
+    { id: "m8", name: "Açaí 500ml", category: "Sobremesas", price: 24.9, available: true, sold: 73 },
+    { id: "m9", name: "Milkshake", category: "Bebidas", price: 18.5, available: false, sold: 48 },
+    { id: "m10", name: "Coca-Cola", category: "Bebidas", price: 8.0, available: true, sold: 210 },
+  ];
+
+  const seedPayouts = () => [
+    { id: "r1", period: "11/08 a 17/08", date: "2026-08-19", gross: 4280.4, fee: 513.65, net: 3766.75, status: "Pago" },
+    { id: "r2", period: "18/08 a 24/08", date: "2026-08-26", gross: 3912.8, fee: 469.54, net: 3443.26, status: "Pago" },
+    { id: "r3", period: "25/08 a 31/08", date: "2026-09-02", gross: 1860.55, fee: 223.27, net: 1637.28, status: "Agendado" },
+    { id: "r4", period: "01/09 a 07/09", date: "2026-09-09", gross: 0, fee: 0, net: 0, status: "Aberto" },
   ];
 
   const seedThreads = () => [
@@ -147,6 +178,16 @@
     if (!localStorage.getItem(KEYS.orders)) write(KEYS.orders, seedOrders());
     if (!localStorage.getItem(KEYS.threads)) write(KEYS.threads, seedThreads());
     if (!localStorage.getItem(KEYS.notices)) write(KEYS.notices, seedNotices());
+    if (!localStorage.getItem(KEYS.menu)) write(KEYS.menu, seedMenu());
+    if (!localStorage.getItem(KEYS.payouts)) write(KEYS.payouts, seedPayouts());
+    if (localStorage.getItem(KEYS.version) !== "2") {
+      const current = read(KEYS.orders, []);
+      const ids = new Set(current.map((item) => item.id));
+      write(KEYS.orders, current.concat(seedOrders().filter((item) => !ids.has(item.id))));
+      if (!localStorage.getItem(KEYS.menu)) write(KEYS.menu, seedMenu());
+      if (!localStorage.getItem(KEYS.payouts)) write(KEYS.payouts, seedPayouts());
+      write(KEYS.version, "2");
+    }
   };
 
   ensure();
@@ -181,6 +222,18 @@
     },
     saveNotices(list) {
       write(KEYS.notices, list);
+    },
+    menu() {
+      return read(KEYS.menu, seedMenu());
+    },
+    saveMenu(list) {
+      write(KEYS.menu, list);
+    },
+    payouts() {
+      return read(KEYS.payouts, seedPayouts());
+    },
+    savePayouts(list) {
+      write(KEYS.payouts, list);
     },
     session() {
       return read(KEYS.session, null);
