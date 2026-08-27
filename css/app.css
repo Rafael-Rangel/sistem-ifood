@@ -184,20 +184,27 @@ body {
 }
 
 .header-actions .btn {
-  width: 42px;
-  height: 42px;
+  width: 56px;
+  height: 56px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: relative;
 }
 
+.header-actions icon-set,
+.header-actions svg {
+  width: 32px;
+  height: 32px;
+}
+
 .dot-alert {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
+  top: 10px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
   background: var(--bs-primary);
   border-radius: 50%;
 }
@@ -262,7 +269,7 @@ body {
   position: relative;
   display: grid;
   grid-template-columns: minmax(260px, 340px) 1fr;
-  height: calc(100dvh - 92px);
+  height: calc(100dvh - 110px);
   background: #efeae2;
 }
 
@@ -535,7 +542,7 @@ body {
 @media (max-width: 767.98px) {
   #view.is-chat,
   .chat-app {
-    height: calc(100dvh - 168px);
+    height: calc(100dvh - 186px);
   }
   .chat-app {
     grid-template-columns: 1fr;
@@ -662,7 +669,7 @@ body {
   }
 
   .message-structure {
-    height: calc(100dvh - 168px);
+    height: calc(100dvh - 186px);
   }
 
   .ranking-podium {
