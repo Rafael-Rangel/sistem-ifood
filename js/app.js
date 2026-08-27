@@ -16,6 +16,8 @@
     analises: "Relatórios e Análises",
     seguranca: "Segurança e Acesso",
     mensagens: "Mensagens",
+    avaliacoes: "Avaliações",
+    ajuda: "Ajuda",
   };
 
   let charts = [];
@@ -952,6 +954,120 @@
       </div>
     </form>`;
 
+  const reviews = [
+    { name: "Mariana Souza", stars: 5, item: "Super Bacon", date: "Hoje", text: "Lanche chegou quente e sem cebola, como pedi." },
+    { name: "Helena Dias", stars: 5, item: "Combo Família", date: "Hoje", text: "Porção grande e no horário. Pedido 21." },
+    { name: "Ana Clara", stars: 4, item: "Hambúrguer Vegano", date: "Ontem", text: "Vegano bom. Suco veio sem gelo." },
+    { name: "Sofia Lima", stars: 5, item: "Açaí 700ml", date: "Hoje", text: "Açaí gelado e foto da entrega no app." },
+    { name: "Pedro Henrique", stars: 2, item: "Hambúrguer de Frango", date: "25/08", text: "Cancelaram na hora do almoço." },
+    { name: "Beatriz Oliveira", stars: 3, item: "Hambúrguer Vegano", date: "Hoje", text: "Cancelamento na porta. Quero reembolso do PIX." },
+  ];
+
+  const stars = (n) => `<span class="review-stars">${"★".repeat(n)}${"☆".repeat(5 - n)}</span>`;
+
+  const renderAvaliacoes = () => {
+    const avg = (reviews.reduce((sum, r) => sum + r.stars, 0) / reviews.length).toFixed(1);
+    const good = reviews.filter((r) => r.stars >= 4).length;
+    view.innerHTML = `
+      <div class="container-fluid pb-4">
+        <div class="row mt-3">
+          <div class="col-12 col-md-4 my-2 page-animate">
+            <div class="card kpi-card h-100">
+              <div class="card-header"><h6 class="m-0 text-secondary">Nota da loja</h6></div>
+              <div class="card-body">
+                <h2 class="mb-1">${avg}</h2>
+                ${stars(5)}
+                <p class="small text-body-tertiary mb-0 mt-2">Baseada nas ${reviews.length} avaliações recentes do iFood</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 my-2 page-animate">
+            <div class="card kpi-card h-100">
+              <div class="card-header"><h6 class="m-0 text-secondary">Positivas</h6></div>
+              <div class="card-body"><h3>${Math.round((good / reviews.length) * 100)}%</h3><small>4 e 5 estrelas</small></div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 my-2 page-animate">
+            <div class="card kpi-card h-100">
+              <div class="card-header"><h6 class="m-0 text-secondary">A responder</h6></div>
+              <div class="card-body"><h3>2</h3><small>Notas abaixo de 4</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="card anim-card page-animate mt-2">
+          <div class="card-header"><h6 class="m-0 text-secondary">Comentários dos clientes</h6></div>
+          <div class="card-body p-0">
+            ${reviews
+              .map(
+                (r) => `
+              <article class="review-item">
+                <div class="d-flex justify-content-between gap-2">
+                  <strong>${r.name}</strong>
+                  <small class="text-body-tertiary">${r.date}</small>
+                </div>
+                ${stars(r.stars)}
+                <p class="mb-1">${r.text}</p>
+                <small class="text-body-tertiary">${r.item}</small>
+                <div class="mt-2">
+                  <button class="btn btn-sm btn-outline-primary" data-review-reply="${r.name}">Responder</button>
+                </div>
+              </article>`
+              )
+              .join("")}
+          </div>
+        </div>
+      </div>`;
+  };
+
+  const renderAjuda = () => {
+    const faqs = [
+      ["Quando cai o repasse?", "Pix cai na hora no iFood Pago. Débito em D+1, crédito em D+7. O ciclo semanal aparece em Repasses."],
+      ["Como antecipar o valor?", "No menu Repasses, use Antecipar. A taxa da demo é 2% sobre o líquido do ciclo."],
+      ["Por que a taxa é 12%?", "É a comissão padrão do parceiro nesta simulação. Tickets de revisão ficam no chat com o Suporte iFood."],
+      ["Pedido cancelado na porta?", "Peça ao entregador para devolver o item e registre o cancelamento em Gestão. O PIX é estornado pelo iFood Pago."],
+    ];
+    view.innerHTML = `
+      <div class="container-fluid pb-4">
+        <div class="row mt-3">
+          <div class="col-12 col-lg-4 my-2 page-animate">
+            <div class="card insight-card h-100">
+              <h6>Suporte iFood</h6>
+              <p class="mb-3">Cancelamentos, taxa e reputação da loja.</p>
+              <a class="btn btn-primary btn-sm" href="#/mensagens">Abrir conversa</a>
+            </div>
+          </div>
+          <div class="col-12 col-lg-4 my-2 page-animate">
+            <div class="card insight-card h-100">
+              <h6>iFood Pago</h6>
+              <p class="mb-3">Repasse, antecipação e comprovantes.</p>
+              <a class="btn btn-outline-primary btn-sm" href="#/repasses">Ver repasses</a>
+            </div>
+          </div>
+          <div class="col-12 col-lg-4 my-2 page-animate">
+            <div class="card insight-card h-100">
+              <h6>Horário da loja</h6>
+              <p class="mb-1">Seg a Dom · 11h às 23h</p>
+              <p class="small text-body-tertiary mb-0">Copacabana · aberta agora no iFood</p>
+            </div>
+          </div>
+        </div>
+        <div class="card anim-card page-animate mt-2">
+          <div class="card-header"><h6 class="m-0 text-secondary">Perguntas frequentes</h6></div>
+          <div class="card-body">
+            ${faqs
+              .map(
+                ([q, a], i) => `
+              <details class="help-faq" ${i === 0 ? "open" : ""}>
+                <summary>${q}</summary>
+                <p>${a}</p>
+              </details>`
+              )
+              .join("")}
+          </div>
+        </div>
+      </div>`;
+  };
+
   const escapeHtml = (value) =>
     String(value || "")
       .replace(/&/g, "&amp;")
@@ -1099,6 +1215,8 @@
     else if (known === "cardapio") renderCardapio();
     else if (known === "analises") renderAnalises();
     else if (known === "seguranca") renderSeguranca();
+    else if (known === "avaliacoes") renderAvaliacoes();
+    else if (known === "ajuda") renderAjuda();
     else renderMensagens();
     updateBadges();
     animateView();
@@ -1201,6 +1319,11 @@
       S.saveUsers(S.users().filter((u) => u.id !== del.dataset.userDel));
       toast("Usuário removido.");
       render();
+      return;
+    }
+    const reply = event.target.closest("[data-review-reply]");
+    if (reply) {
+      toast(`Resposta enviada para ${reply.dataset.reviewReply}.`);
       return;
     }
     const thread = event.target.closest("[data-thread]");
